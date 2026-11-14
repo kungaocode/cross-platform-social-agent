@@ -1,0 +1,57 @@
+{
+  "base_config": "../config.json",
+  "memory_dir": "../data/memory/current",
+  "peers": [],
+  "enabled": false,
+  "comments_enabled": false,
+  "comment_senders": [],
+  "poll_seconds": 20,
+  "max_replies_per_poll": 5,
+  "tool_calling_enabled": true,
+  "allow_weather_tool": true,
+  "allow_research_tool": true,
+  "allow_time_tool": true,
+  "allow_link_tool": true,
+  "emoji_enabled": true,
+  "image_reading_enabled": true,
+  "video_reading_enabled": true,
+  "credentials_file": "../private/accounts/bilibili/credentials.json",
+  "account_uid": "",
+  "comment_replies_enabled": false,
+  "video_social": {
+    "enabled": false,
+    "interests": [
+      "大肥鱼",
+      "小短剧",
+      "二创视频"
+    ],
+    "max_videos_per_run": 5,
+    "max_comments_per_run": 1,
+    "analysis_seconds": 90,
+    "refresh_attempts": 3,
+    "search_fallback": true,
+    "post_comments": true,
+    "min_comment_interval_seconds": 180,
+    "watch_after_seconds": 120,
+    "max_runtime_seconds": 900,
+    "browser_frame_fallback": true,
+    "comment_transport": "browser",
+    "deep_understanding": {
+      "enabled": true,
+      "frame_count": 6,
+      "max_retries": 1,
+      "asr_enabled": true,
+      "max_download_mb": 96,
+      "download_timeout_seconds": 35
+    },
+    "comment_preset": {
+      "enabled": false,
+      "owner_uid": "",
+      "owner_name": "",
+      "address": "主人",
+      "instructions": "像给主人分享刚看到的视频一样自然、亲近。介绍视频在讲什么，再描述一个具体可见画面，可以有少量emoji。"
+    }
+  },
+  "private_chat_mode": "allowlist",
+  "private_batch_size": 20
+}

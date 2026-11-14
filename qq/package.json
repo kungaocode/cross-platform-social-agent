@@ -1,0 +1,13 @@
+{
+  "name": "deepseek-social-qq",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@tencent-connect/qqbot-nodejs": "1.0.5",
+    "silk-wasm": "3.7.1"
+  }
+}

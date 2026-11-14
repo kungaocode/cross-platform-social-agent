@@ -1,0 +1,13 @@
+# Isolated interpreter only. Do not install upstream's unbounded requirements.
+curl_cffi>=0.13,<0.18
+cryptography>=43
+ecdsa>=0.19,<0.20
+lxml>=5
+loguru>=0.7,<0.8
+protobuf>=5.27,<7
+websocket-client>=1.8,<2
+python-dotenv>=1,<2
+requests>=2.32,<3
+pillow>=10
+qrcode>=8
+retry>=0.9

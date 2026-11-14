@@ -1,0 +1,25 @@
+{
+  "base_config": "../config.json",
+  "memory_dir": "../data/memory/current",
+  "private_users": [],
+  "groups": [],
+  "max_queue": 20,
+  "max_context_messages": 24,
+  "group_multimodal_global": true,
+  "image_reading_enabled": true,
+  "speech_recognition_enabled": true,
+  "video_reading_enabled": true,
+  "document_reading_enabled": true,
+  "tool_calling_enabled": true,
+  "allow_weather_tool": true,
+  "allow_research_tool": true,
+  "allow_time_tool": true,
+  "allow_link_tool": true,
+  "qzone": {
+    "enabled": false,
+    "base_url": "http://127.0.0.1:3000",
+    "token_env": "QZONE_ACCESS_TOKEN",
+    "owner_openids": [],
+    "ugc_right": 4
+  }
+}

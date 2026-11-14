@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "database_path": "data/memory/scheduler.sqlite3",
+  "max_concurrent_requests": 2,
+  "min_start_interval_seconds": 1,
+  "max_queue": 32,
+  "queue_timeout_seconds": 90
+}

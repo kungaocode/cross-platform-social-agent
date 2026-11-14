@@ -1,0 +1,74 @@
+{
+  "base_config": "../config.json",
+  "memory_dir": "../data/memory/current",
+  "peers": [],
+  "all_peers": false,
+  "max_peers": 20,
+  "group_names": [],
+  "bot_name": "鲲",
+  "enabled": false,
+  "comments_enabled": false,
+  "comment_senders": [],
+  "poll_seconds": 1,
+  "message_detection": "unread",
+  "full_scan_seconds": 60,
+  "max_replies_per_poll": 5,
+  "tool_calling_enabled": true,
+  "allow_weather_tool": true,
+  "allow_research_tool": true,
+  "allow_time_tool": true,
+  "allow_link_tool": true,
+  "emoji_enabled": true,
+  "image_reading_enabled": true,
+  "video_reading_enabled": true,
+  "account_id": "default",
+  "browser_channel": "msedge",
+  "browser_connection": "direct",
+  "self_user_id": "",
+  "mentions_selectors": {},
+  "comment_replies_enabled": false,
+  "video_social": {
+    "enabled": false,
+    "interests": [
+      "大肥鱼",
+      "小短剧",
+      "二创视频"
+    ],
+    "max_videos_per_run": 5,
+    "max_comments_per_run": 1,
+    "analysis_seconds": 90,
+    "refresh_attempts": 3,
+    "search_fallback": true,
+    "post_comments": false,
+    "min_comment_interval_seconds": 180,
+    "watch_after_seconds": 120,
+    "max_runtime_seconds": 900,
+    "browser_frame_fallback": true,
+    "comment_transport": "browser",
+    "deep_understanding": {
+      "enabled": true,
+      "frame_count": 6,
+      "max_retries": 1,
+      "asr_enabled": true,
+      "max_download_mb": 96,
+      "download_timeout_seconds": 35
+    },
+    "delivery": "comment",
+    "understanding_message": true
+  },
+  "transport": "api",
+  "api_video_commands": {
+    "enabled": false
+  },
+  "api_reconnect": {
+    "enabled": true,
+    "max_attempts": 10,
+    "max_delay_seconds": 60
+  },
+  "api_backend": {
+    "credentials_file": "../private/accounts/douyin/credentials-api.json",
+    "expected_uid": "",
+    "writes_enabled": false,
+    "max_source_seconds": 0
+  }
+}
