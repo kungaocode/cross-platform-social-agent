@@ -1,4 +1,4 @@
-"""Check Git index/HEAD for private paths, common secret formats and known local values.
+"""Check Git index, HEAD or full history for private paths and sensitive values.
 
 Only locations and finding categories are printed. This is a publication guard,
 not a replacement for review or GitHub secret scanning.
@@ -13,10 +13,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BLOCKED = re.compile(
-    r'(^|/)(private|data|reports|picture|node_modules|\.venv|__pycache__)(/|$)'
+    r'(^|/)(private|data|reports|picture|node_modules|\.venv|__pycache__|logs?|screenshots|downloads)(/|$)'
     r'|(^|/)(config\.json|config\.api\.local\.json|credentials\.json|credentials-api\.json|scheduler\.json)$'
     r'|(^|/)(api[^/]*\.txt|weather_api[^/]*|search_api[^/]*|search_credentials\.json|\.env(?:\..*)?)$'
-    r'|\.(bak|backup|sqlite\d*(?:-\w+)?|db(?:-\w+)?|log|har|pem|key|p12|pfx|mp4|zip)$', re.I)
+    r'|\.(bak|backup|sqlite\d*(?:-\w+)?|db(?:-\w+)?|log(?:\.\w+)?|har|pem|key|p12|pfx|mp4|zip|out|err|trace|jsonl|ndjson|dmp|pcap|pcapng|7z|rar|tar|tar\.gz)$', re.I)
 PATTERNS = {
     'github_token': re.compile(r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})'),
     'api_key': re.compile(r'\bsk-[A-Za-z0-9_-]{20,}'),
@@ -56,7 +56,7 @@ def local_values():
     files = [ROOT/'config.json', *(ROOT/p/'config.json' for p in ('qq','bilibili','douyin')),
              ROOT/'douyin/config.api.local.json']
     config_files = set(files)
-    for directory in ('private/secrets', 'private/accounts'):
+    for directory in ('private/secrets', 'private/accounts', 'private/archive/pre-publication', 'private/archive/config-backups'):
         path = ROOT/directory
         if path.exists():
             files.extend(p for p in path.rglob('*') if p.is_file())
@@ -73,7 +73,8 @@ def local_values():
         text = path.read_text(encoding='utf-8-sig', errors='replace')
         if path.suffix == '.json':
             try:
-                collect(json.loads(text), force=path not in config_files)
+                archive = ROOT/'private/archive'
+                collect(json.loads(text), force=path not in config_files and not path.is_relative_to(archive))
             except ValueError:
                 pass
         else:
@@ -85,40 +86,57 @@ def local_values():
     return values
 
 
+def inspect_text(path, content, known):
+    findings = []
+    if b'\0' in content:
+        return [(path, 0, 'unreviewed_binary')]
+    text = content.decode('utf-8', errors='replace')
+    for category, pattern in PATTERNS.items():
+        for match in pattern.finditer(text):
+            if category == 'api_key' and any(word in match.group().lower() for word in ('test', 'placeholder', 'example', 'offline')):
+                continue
+            findings.append((path, text.count('\n', 0, match.start())+1, category))
+    for value in known:
+        offset = text.find(value)
+        if offset >= 0:
+            findings.append((path, text.count('\n', 0, offset)+1, 'known_local_value'))
+    return findings
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--head', action='store_true', help='Inspect committed HEAD instead of index')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--head', action='store_true', help='Inspect committed HEAD instead of index')
+    mode.add_argument('--history', action='store_true', help='Inspect all reachable commits and commit messages')
     args = parser.parse_args()
-    paths = git('ls-tree', '-r', '--name-only', '-z', 'HEAD') if args.head else git('ls-files', '-z')
     known = local_values()
-    findings = []
-    count = 0
-    for raw in paths.split(b'\0'):
-        if not raw:
-            continue
-        path = raw.decode('utf-8')
-        count += 1
-        if BLOCKED.search(path) or (path.startswith('third_party/') and path != 'third_party/README.md'):
-            findings.append((path, 0, 'private_or_runtime_path'))
-        spec = ('HEAD:' if args.head else ':') + path
-        content = git('show', spec)
-        if b'\0' in content:
-            findings.append((path, 0, 'unreviewed_binary'))
-            continue
-        text = content.decode('utf-8', errors='replace')
-        for category, pattern in PATTERNS.items():
-            for match in pattern.finditer(text):
-                # Explicit fake keys used by automated fixtures are not credentials.
-                if category == 'api_key' and any(word in match.group().lower() for word in ('test', 'placeholder', 'example', 'offline')):
-                    continue
-                findings.append((path, text.count('\n', 0, match.start())+1, category))
-        for value in known:
-            offset = text.find(value)
-            if offset >= 0:
-                findings.append((path, text.count('\n', 0, offset)+1, 'known_local_value'))
+    findings, checked = [], set()
+    revisions = git('rev-list', '--all').decode().splitlines() if args.history else ['HEAD' if args.head else '']
+    for revision in revisions:
+        entries = git('ls-tree', '-r', '-z', revision) if revision else git('ls-files', '--stage', '-z')
+        label = revision[:12]+':' if args.history else ''
+        if args.history:
+            findings.extend(inspect_text(label+'<commit-message>', git('show', '-s', '--format=%B', revision), known))
+        for entry in entries.split(b'\0'):
+            if not entry:
+                continue
+            metadata, raw = entry.split(b'\t', 1)
+            fields = metadata.decode().split()
+            filemode, oid = fields[0], fields[2] if revision else fields[1]
+            path = raw.decode('utf-8')
+            location = label+path
+            if BLOCKED.search(path) or (path.startswith('third_party/') and path != 'third_party/README.md'):
+                findings.append((location, 0, 'private_or_runtime_path'))
+            if filemode not in {'100644', '100755'}:
+                findings.append((location, 0, 'link_or_submodule'))
+                continue
+            if (path, oid) in checked:
+                continue
+            checked.add((path, oid))
+            findings.extend(inspect_text(location, git('cat-file', 'blob', oid), known))
     for path, line, category in sorted(set(findings)):
         print(f'{path}:{line}: {category}')
-    print(json.dumps({'files_checked': count, 'findings': len(set(findings))}))
+    print(json.dumps({'file_versions_checked': len(checked), 'commits_checked': len(revisions) if args.history else 0, 'findings': len(set(findings))}))
     return 1 if findings else 0
 
 

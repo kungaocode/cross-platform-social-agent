@@ -22,6 +22,7 @@ Control access to the machine and backups as you would for other account data.
 ```powershell
 git status --short
 python scripts/check_publication.py
+python scripts/check_publication.py --history
 git diff --cached --stat
 ```
 
@@ -29,6 +30,9 @@ The check inspects the actual Git index. It rejects private/runtime paths,
 unreviewed binaries, common token formats and known values read from local key,
 account and active configuration files. It prints finding categories and
 locations, not the sensitive values. `--head` checks the committed snapshot.
+`--history` checks all reachable commits, including deleted files and commit
+messages. Logs, traces, traffic captures and raw line-oriented exports are
+excluded from publication even when their extension differs from `.log`.
 Use `git config core.hooksPath .githooks` to enable the local pre-commit guard.
 
 This check is an additional guard, not a guarantee of exhaustive detection.
@@ -50,4 +54,6 @@ after a commit does not remove previous copies.
 
 发布检查扫描实际暂存内容，只输出问题位置和类别。它还会把待提交文本与本机
 已知敏感值比对；缺少本机私密文件的干净环境只能进行格式和路径检查。
+`--history` 会检查全部可达提交，包含后来被删除的文件及提交说明；轮转日志、
+JSONL/NDJSON、追踪文件和抓包文件同样排除，不能仅凭扩展名不是 `.log` 就上传。
 不要把“仓库是私有的”当作上传凭据的理由，也不要用强制添加绕开忽略规则。

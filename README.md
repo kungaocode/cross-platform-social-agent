@@ -167,6 +167,7 @@ python -m unittest discover -s tests -q
 npm --prefix qq test
 python run_pipeline_check.py
 python scripts/check_publication.py
+python scripts/check_publication.py --history
 ```
 
 Offline tests exercise control flow, memory, model handoffs and delivery state with fixtures. They do not prove that an account can send real messages, every event will be delivered, or a model will understand every document. Login state, verification challenges, client versions and platform changes can interrupt operation. Douyin API reconnection does not backfill missed messages; its API inbox does not yet handle group or multimedia messages. Video understanding remains limited to acquired evidence.
@@ -298,6 +299,6 @@ Python 回归、QQ Node 测试和离线链路验证覆盖控制流程、记忆�
 
 ### 隐私与来源
 
-API 密钥、Cookie、私钥、账号绑定、聊天记录、截图、浏览器登录资料、运行报告和私人媒体仅留本地。发布检查会扫描 Git 暂存区中的敏感路径、常见密钥格式和本机已知敏感值，详见[隐私与发布](docs/privacy.md)。
+API 密钥、Cookie、私钥、账号绑定、聊天记录、截图、浏览器登录资料、运行报告和私人媒体仅留本地。发布检查支持扫描 Git 暂存区和全部提交历史，检查敏感路径、常见密钥格式与本机已知敏感值；日志及轮转日志、追踪和抓包文件同样排除，详见[隐私与发布](docs/privacy.md)。
 
 使用本人控制并有权自动化的账号，遵守平台权限和验证要求。第三方来源及许可保留在[来源说明](THIRD_PARTY_NOTICES.md)和平台许可文件中；可选抖音后台源码不随仓库分发，也不由本项目重新授权。

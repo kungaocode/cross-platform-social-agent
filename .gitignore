@@ -60,3 +60,22 @@ venv/
 /third_party/*
 !/third_party/README.md
 /moments_prompt.txt
+
+# Raw logs, traces and captured runtime traffic are never source artifacts.
+logs/
+log/
+screenshots/
+downloads/
+*.log.*
+*.out
+*.err
+*.trace
+*.jsonl
+*.ndjson
+*.dmp
+*.pcap
+*.pcapng
+*.7z
+*.rar
+*.tar
+*.tar.gz
