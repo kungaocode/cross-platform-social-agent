@@ -20,6 +20,20 @@ This project connects WeChat, QQ, Bilibili and Douyin to a common agent core. It
 
 My proposed answer is a **cross-platform, multi-model conversational agent**: shared experience, one coherent conversational interface, and explicit responsibilities for models and tools.
 
+### Design choices and contributions
+
+The central contribution is how these components work together to sustain an agent's experience across apps. Continuity is implemented in the orchestration, storage and retrieval layers: each model request receives selected context from the ongoing record. The following choices guide the implementation:
+
+| Design choice | Purpose |
+| --- | --- |
+| A shared experience layer | Bring recorded conversations and sourced video observations into a retrievable history, so later conversations can draw on relevant earlier activity. |
+| Separate conversation, task and perception roles | Keep a consistent conversational identity while assigning planning, evidence gathering and media understanding to suitable components. |
+| Memory with relevance, time and provenance | Preserve who said something, where it came from and when it applied; select useful memories within a bounded context budget. |
+| Capabilities behind platform adapters | Reuse understanding and utility modules while adapting connection, permissions and delivery to each app. Douyin's hybrid transport is one example of choosing a transport for each operation. |
+| Explicit execution and delivery state | Track what was understood, what an operation actually returned, and whether its result was delivered; use persisted handoffs for supported recovery. |
+
+Together, these choices form a continuing loop: **participate → acquire evidence → retain experience → retrieve relevant context → respond or perform an authorized action**. For example, a discussion on QQ and a recorded video analysis can inform a later WeChat conversation. This depends on the information actually retained and, when identifying a person across apps, an explicit identity association. The agent does not infer new permission to publish or send from an old memory.
+
 ### Functional areas
 
 | Area | Implementation | Capabilities and current boundaries |
@@ -70,6 +84,8 @@ The agent has one intended conversational identity. Each model supplies a capabi
 
 Model names and endpoints are configurable. The task model receives only tools exposed for the current platform and message. The final conversation stage receives findings, sources, failures and actual operation receipts; the task model's internal reasoning is not forwarded as conversation history.
 
+This handoff also has a durability purpose: supported reply jobs checkpoint the prepared findings and receipts before final generation. If that final stage fails, it can be retried from the saved handoff without rerunning completed tools. An uncertain external send or an unfinished operation still requires separate handling. Keeping these stages explicit helps preserve task context across model calls and avoids treating a generated answer as proof of a completed action.
+
 Fixed acknowledgements, video interpretations and completion notices also have their own paths. This division describes the common chat pipeline, not a guarantee that every piece of outgoing text passes through the final chat model.
 
 ### How the modules work together
@@ -82,7 +98,19 @@ Fixed acknowledgements, video interpretations and completion notices also have t
 
 **Browsing videos.** The workflow obtains recommendation or topic candidates, opens/acquires selected videos, samples available content, organizes an interpretation and can share it through comments or messages. It is inspired by how people browse and discuss videos; it does not imply continuous full-length human viewing. Light mode uses title and sampled frames. Deep mode adds evidence gathering, available audio/ASR and independent review. Reports retain sources, coverage and verification status. Backend media acquisition is not confirmed browser playback.
 
+In deep mode, individual claims refer to collected evidence IDs. A separate review step checks those claims against the sources and can request additional observations around uncertain timestamps within a retry budget. Unresolved conclusions are withheld from that mode's automatic-comment path. The same model may perform drafting and review; a separate review call does not guarantee correctness. Light mode has its own policy and does not inherit this review result.
+
 **Memory across terminals.** Platform databases preserve local history, routing and delivery state. A durable synchronization path feeds one shared agent memory database. Retrieval selects relevant records by query, source, time and recent/long/core priority instead of attaching the entire archive to every request. Explicit identity linking keeps different people distinct until there is a reliable association. Current retrieval uses indexed lexical matching and rules; it is not vector memory or perfect recall.
+
+| Memory tier | Intended use | Retention and retrieval behavior |
+| --- | --- | --- |
+| Recent | Ongoing exchanges and recent activity | Time-sensitive retrieval with decaying weight. |
+| Long-term | Stated preferences, stable background and reinforced statements | Slower decay; repeated statements can gain weight without replayed events being counted again. |
+| Core | Explicit requests to remember and manually pinned statements | No automatic weight decay; still selected according to relevance and time eligibility. |
+
+Relative expressions such as “today” remain tied to the original statement's date. Sources distinguish user statements, generated replies and video observations, with delivery status where recorded. Once a local event and its synchronization job are persisted, a temporary shared-store failure can leave pending work for retry. This gives the agent a recoverable experience record while keeping recall selective.
+
+The current implementation assumes the participating processes can access the same shared SQLite database path. Deployment across independent machines would require an additional synchronization or service layer; the repository does not provide automatic cloud or internet-wide memory synchronization.
 
 **Weather, IP and search.** Public-IP location can provide a weather location when no city is supplied. It describes the running machine's approximate location, not the remote chat participant's location. Search supports ordered DuckDuckGo, Baidu and Bocha fallback, retaining the actual provider and source links. Old weather and search memories do not replace fresh queries.
 
@@ -169,6 +197,20 @@ Use accounts and automation permissions you control. Platform restrictions and m
 
 我的方向是一个**跨平台、基于多模型协作的综合聊天智能体**：对外是统一的身份和交流体验，背后由不同模型和工具承担各自适合的任务。
 
+### 设计重点与项目贡献
+
+这项探索的重点，是让不同组件协作起来，维持智能体跨软件的连续经历。连续性由任务编排、存储和召回层实现，每次模型请求从持续积累的记录中取得所需上下文。实现中主要坚持以下设计：
+
+| 设计选择 | 希望达到的效果 |
+| --- | --- |
+| 共享经历层 | 把已记录的聊天和有来源的视频观察纳入可召回的历史，让之后的交流能够参考相关经历。 |
+| 对话、任务与感知分工 | 保持统一的交流身份，同时让适合的组件承担任务计划、取材和多媒体理解。 |
+| 带相关性、时间和来源的记忆 | 保留是谁说的、来自哪里、何时有效，并在有限上下文中选取有用信息。 |
+| 通过平台适配器提供能力 | 复用理解与辅助模块，分别适配连接、权限和投递方式；抖音混合通道体现了按操作选择实现方式的思路。 |
+| 明确的执行与投递状态 | 区分理解结果、操作回执和实际送达，并通过持久交接支持限定范围内的故障恢复。 |
+
+这些设计共同形成一个持续循环：**参与交流 → 获取证据 → 保留经历 → 召回相关上下文 → 回复或执行已授权动作**。例如，QQ 中的一次讨论和已记录的视频分析，可以成为后续微信交流的参考。能否接续取决于实际保留的信息；判断跨平台是否为同一个人时，还需要明确的身份关联。旧记忆不会自动赋予新的发布或发送权限。
+
 ### 已连接的功能板块
 
 | 板块 | 实现方式 | 功能与当前边界 |
@@ -198,6 +240,8 @@ Use accounts and automation permissions you control. Platform restrictions and m
 
 模型和接口可以配置。任务模型只能调用当前平台、当前消息所暴露的工具；最终聊天模型接收结论、来源、覆盖范围、失败信息和实际回执，不把任务模型的内部推理当作聊天历史传递。
 
+这种交接也承担恢复任务上下文的作用：受支持的回复任务会在最终生成前保存整理结果和回执。最终回复阶段失败时，可以从已保存的交接继续生成，避免再次执行已完成的工具。外部发送结果未知、操作尚未完成等情况仍需分别处理。明确这些阶段，既有助于跨模型调用保留任务信息，也能避免把“生成了回答”误当作“动作已经成功”。
+
 固定确认、视频解读和任务完成提醒还有各自的生成路径。上述分工描述公共聊天链路，不意味着每一段发送文字都经过最终聊天模型。
 
 ### 每个板块的具体思路
@@ -210,7 +254,19 @@ Use accounts and automation permissions you control. Platform restrictions and m
 
 **效仿人类刷视频。** 从推荐或话题候选开始，打开或取得视频，读取可用内容，组织理解，再通过评论或私信交流。轻读使用标题和采样帧；深度模式增加取材、可用音轨/ASR 和独立复核。报告保留来源、覆盖范围与复核状态。这是受人类浏览方式启发的流程，不等于持续观看完整视频；后台下载也不能当作已产生网页播放记录。
 
+深度模式要求逐条结论引用采集证据的编号，再由单独的复核步骤对照来源检查；存在疑点时，可在重试预算内围绕相应时间点补采。未解决的结论不会进入该模式的自动评论流程。起草和复核可能使用同一个模型，单独复核不保证结论一定正确；轻读模式使用独立策略，不自动具备这一复核结果。
+
 **多终端共享记忆。** 平台数据库保留本地会话、路由和投递记录，通过持久同步链路把经历写入同一个智能体记忆库。召回按问题相关性、时间和近期/长期/核心层级筛选资料，而不是每次把整个库塞给模型。跨平台身份需要可靠关联，不会仅凭同名认定是同一个人。当前使用索引匹配和规则排序，尚不是向量记忆或保证永不遗忘的系统。
+
+| 记忆层级 | 主要用途 | 保留和召回方式 |
+| --- | --- | --- |
+| 近期 | 当前交流和最近经历 | 按时间有效性召回，权重随时间衰减。 |
+| 长期 | 明确表达的偏好、稳定背景及反复强化的陈述 | 衰减更慢；重复表达可以强化，事件重放不重复计数。 |
+| 核心 | 明确要求记住或人工固定的陈述 | 权重不自动衰减，但仍按相关性和时间有效性参与召回。 |
+
+“今天”等相对时间会绑定到原始发言日期；用户陈述、生成回复和视频观察保留不同来源，在有记录时还附带投递状态。本地事件及同步任务完成持久化后，共享库暂时不可用时可以留下待办，之后重试。这使经历记录能够恢复，同时保持每轮召回的选择性。
+
+当前实现要求参与进程能够访问同一个共享 SQLite 数据库路径。如果部署在彼此独立的机器上，还需要额外的同步或服务层；本仓库尚未提供自动云端或跨互联网的记忆同步。
 
 **天气、IP 与搜索辅助。** 没有明确城市时，可以用公网 IP 近似位置辅助查询天气；该位置属于运行机器，不是远端聊天用户。搜索支持 DuckDuckGo、百度、博查有序回退，并保留实际服务来源和链接。记忆中的旧天气、旧搜索不能替代实时查询。这些模块拓展智能体在日常交流中的实用能力。
 
