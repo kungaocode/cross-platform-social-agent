@@ -16,10 +16,11 @@ ROOT = Path(__file__).resolve().parent
 REPORTS = ROOT / 'reports'
 STATE = REPORTS / 'services-on-e.json'
 COMMANDS = {'wechat':['run_wechat.py'], 'qq':['run_qq.py'],
-            'bilibili':['run_bilibili.py','listen'], 'douyin':['run_douyin.py','listen']}
+            'bilibili':['run_bilibili.py','listen'],
+            'douyin':['run_douyin.py','listen','--config','douyin/config.api.local.json']}
 LABELS = {'wechat':'微信','qq':'QQ','bilibili':'B站','douyin':'抖音'}
 READY = {'wechat':'微信适配器已启动','qq':'QQ 已连接',
-         'bilibili':'bilibili_listener_ready','douyin':'消息识别运行'}
+         'bilibili':'bilibili_listener_ready','douyin':('后台接口监听已连接','消息识别运行')}
 
 
 def identify(process, root=ROOT):
@@ -34,10 +35,16 @@ def identify(process, root=ROOT):
                 if (root/arg).resolve() != (root/command[0]).resolve(): continue
                 rest = args[i+1:]
                 if name in ('douyin','bilibili') and 'listen' not in rest: continue
-                if '--config' in rest:
-                    config = Path(rest[rest.index('--config')+1])
-                    expected = root/('config.json' if name=='wechat' else name+'/config.json')
-                    if (root/config).resolve() != expected.resolve(): continue
+                configs = []
+                for index, value in enumerate(rest):
+                    if value == '--config':
+                        configs.append(rest[index+1])
+                    elif value.startswith('--config='):
+                        configs.append(value.split('=',1)[1])
+                if configs:
+                    expected = {root/('config.json' if name=='wechat' else name+'/config.json')}
+                    if name=='douyin':expected.add(root/'douyin/config.api.local.json')
+                    if len(configs)!=1 or (root/configs[0]).resolve() not in {p.resolve() for p in expected}:continue
                 return name
     except (psutil.Error,OSError,ValueError,IndexError): pass
     return None
@@ -116,7 +123,7 @@ def start_listener(name):
             cwd=ROOT,env=dict(direct_environment(),PYTHONIOENCODING='utf-8'),stdin=subprocess.DEVNULL,
             stdout=stdout,stderr=stderr,**options)
     return dict(platform=name,pid=process.pid,created_at=psutil.Process(process.pid).create_time(),
-                stdout=str(out),stderr=str(err),network='direct',memory_drive='E:',ready=False)
+                stdout=str(out),stderr=str(err),network='direct',ready=False)
 
 
 def status(name, record, processes):
@@ -132,7 +139,8 @@ def status(name, record, processes):
             if path.is_file() and path.resolve().is_relative_to(REPORTS.resolve()):
                 with path.open('rb') as f:
                     f.seek(max(0,path.stat().st_size-65536));text+=f.read().decode('utf-8',errors='replace')
-    ready=same and (READY[name] in text or bool(record.get('ready')))
+    markers=READY[name] if isinstance(READY[name],tuple) else (READY[name],)
+    ready=same and (any(marker in text for marker in markers) or bool(record.get('ready')))
     result.update(ready=bool(ready),status='已就绪' if ready else '运行中，等待就绪')
     if name=='douyin' and ('captcha_container' in text or '要求人工安全验证' in text):
         result.update(ready=False,status='需在专用浏览器完成人工验证')

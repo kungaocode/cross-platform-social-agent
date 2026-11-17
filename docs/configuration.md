@@ -70,4 +70,49 @@ version control.
 
 实际配置和模板分开保存：只提交模板，实际 `config.json` 仍留本地。已有项目在
 外置目录保存的抖音凭据、浏览器资料和记忆库继续保持原路径，也不得上传。
-抖音 API 配置与默认网页配置是两个入口，启动时需要明确选择。
+抖音 API 配置与默认网页配置是两个入口；统一启动器明确使用 API 配置，单独运行
+`run_douyin.py` 时仍通过 `--config` 选择。
+
+## Starting and stopping
+
+After preparing credentials, accounts and enabled modules, run from the project root:
+
+```powershell
+python run_services.py start
+python run_services.py status
+python run_services.py restart
+python run_services.py stop
+```
+
+Windows users can double-click `启动全部服务.cmd`, `查看服务状态.cmd`,
+`重启全部服务.cmd` or `停止全部服务.cmd`. These wrappers use `.venv/Scripts/python.exe`
+when available, otherwise `python` from PATH. Activate the intended environment
+first when invoking the Python command directly.
+
+The launcher starts:
+
+| Platform | Entry point |
+| --- | --- |
+| WeChat | `run_wechat.py` |
+| QQ | `run_qq.py` |
+| Bilibili | `run_bilibili.py listen` |
+| Douyin | `run_douyin.py listen --config douyin/config.api.local.json` |
+
+Append `--only qq bilibili douyin` to omit WeChat, or `--only douyin` to manage
+only the Douyin listener. The launcher recognizes both the default browser and
+API Douyin configuration for duplicate detection and stopping. A separately
+launched listener without manager-owned log records may show as running but
+without confirmed readiness.
+
+Startup waits for each listener's readiness marker. It does not publish a
+Moment or start video browsing by itself; those actions follow their own triggers
+and configuration. Existing messages may still be handled according to each
+platform listener's rules. Local status and logs are written to
+`reports/services-status.json` and `reports/*-chat-*.log`, which remain ignored
+by Git. This status command reports process and startup readiness, not a full
+end-to-end health check.
+
+中文：本机统一入口已更新为四端启动，其中抖音使用后台私信与网页评论混合链路。
+启动前打开并登录兼容的微信客户端；其他端保持已准备的本地账号资料。启动后可
+用状态脚本查看各端是否就绪；失败时查看 `reports/` 中对应平台的错误日志。
+查看状态和停止脚本不会启动服务，日志也不应上传仓库。

@@ -158,7 +158,18 @@ python run_bilibili.py listen
 python run_douyin.py listen --config douyin/config.api.local.json
 ```
 
-The launcher reads platform defaults. A separate Douyin API configuration must be selected explicitly; it is not substituted silently. The optional backend uses an isolated environment: see [third-party setup](third_party/README.md).
+After configuring the accounts, use the unified launcher:
+
+```powershell
+python run_services.py start
+python run_services.py status
+python run_services.py restart
+python run_services.py stop
+# Start only the Douyin hybrid listener:
+python run_services.py start --only douyin
+```
+
+On Windows, the corresponding double-click scripts are `启动全部服务.cmd`, `查看服务状态.cmd`, `重启全部服务.cmd` and `停止全部服务.cmd`. They prefer the project's `.venv` interpreter when present. The launcher starts WeChat, QQ and Bilibili with their default configurations and explicitly selects `douyin/config.api.local.json` for Douyin backend messaging with browser comments. Prepare that API configuration and its isolated backend first; the launcher does not fall back to the browser inbox if it fails. It recognizes both legacy and API Douyin listeners to prevent duplicate launches. See [configuration notes](docs/configuration.md#starting-and-stopping) and [third-party setup](third_party/README.md).
 
 ### Verification and limitations
 
@@ -287,7 +298,16 @@ Use accounts and automation permissions you control. Platform restrictions and m
 python run_douyin.py listen --config douyin/config.api.local.json
 ```
 
-统一启动器读取各端默认配置，不会自动切换抖音 API 配置。可选后台依赖使用独立环境，见[第三方接入](third_party/README.md)。
+账号配置完成后，可以双击根目录的 `启动全部服务.cmd`，或在项目目录运行：
+
+```powershell
+python run_services.py start
+python run_services.py status
+python run_services.py restart
+python run_services.py stop
+```
+
+另有 `查看服务状态.cmd`、`重启全部服务.cmd` 和 `停止全部服务.cmd`。脚本优先使用项目 `.venv` 中的 Python，没有时使用系统 Python。统一启动器会启动微信、QQ、B站，并明确以 `douyin/config.api.local.json` 启动抖音后台私信及网页评论链路；该 API 配置或后台环境未准备好时会报告失败，不退回网页私信。同时识别旧网页和 API 监听进程，避免重复启动。只启动某端可追加 `--only qq` 或 `--only douyin`。操作说明见[配置文档](docs/configuration.md#starting-and-stopping)，可选后台依赖见[第三方接入](third_party/README.md)。
 
 ### 验证、边界与后续方向
 
